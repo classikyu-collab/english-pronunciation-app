@@ -2,306 +2,418 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>영어 발음 연습</title>
 <style>
-  body { font-family: 'Malgun Gothic', sans-serif; max-width: 480px; margin: 40px auto; padding: 0 16px; }
-  h2 { color: #1a73e8; }
-  #sentenceBox { background: #f1f3f4; border-radius: 8px; padding: 20px; margin: 20px 0; font-size: 20px; text-align: center; }
-  #translation { color: #666; font-size: 14px; margin-top: 8px; }
-  button { padding: 12px 20px; font-size: 16px; border: none; border-radius: 6px; cursor: pointer; margin: 6px 4px; }
-  #recordBtn { background: #ea4335; color: white; }
-  #recordBtn.recording { background: #999; }
-  #nextBtn { background: #1a73e8; color: white; }
-  #resultBox { margin-top: 20px; padding: 16px; border-radius: 8px; background: #e6f4ea; display: none; }
-  #resultBox p { margin: 4px 0; }
-  #status { color: #d93025; font-size: 14px; min-height: 20px; }
-  #attemptInfo { font-size: 14px; color: #555; }
-  input[type=text] { padding: 8px; font-size: 16px; width: 100%; box-sizing: border-box; margin-bottom: 12px; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+    background: #f7f8fa;
+    height: 100%;
+  }
+  .screen {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 32px;
+    min-height: 100vh;
+  }
+  h1 {
+    color: #1a73e8;
+    font-size: 40px;
+    text-align: center;
+    margin: 0 0 40px 0;
+  }
+
+  /* ---------- 로그인(터치 선택) 화면 ---------- */
+  #loginBox { display: block; }
+  .section-label {
+    font-size: 22px;
+    color: #333;
+    margin: 24px 0 16px 0;
+    text-align: center;
+  }
+  .student-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 20px;
+  }
+  .student-card {
+    background: white;
+    border: 3px solid #e0e0e0;
+    border-radius: 20px;
+    padding: 24px 12px;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.08s ease, border-color 0.15s ease;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .student-card:active { transform: scale(0.95); }
+  .student-card.selected { border-color: #1a73e8; background: #eaf2fe; }
+  .avatar {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: #1a73e8;
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 10px;
+  }
+  .student-name { font-size: 20px; font-weight: bold; color: #222; }
+  .student-level { font-size: 14px; color: #888; margin-top: 4px; }
+  .loading-text { text-align: center; color: #888; font-size: 18px; padding: 40px 0; }
+
+  /* ---------- 연습 화면 ---------- */
+  #practiceBox { display: none; }
+  .top-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 24px;
+  }
+  .who-am-i { font-size: 20px; color: #555; }
+  .switch-btn {
+    background: #eee; border: none; border-radius: 12px;
+    padding: 14px 20px; font-size: 16px; color: #555; cursor: pointer;
+  }
+  #sentenceBox {
+    background: white;
+    border-radius: 20px;
+    padding: 48px 24px;
+    margin: 20px 0 32px 0;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  #sentenceText { font-size: 34px; color: #1a1a1a; line-height: 1.4; }
+  #translation { color: #888; font-size: 18px; margin-top: 14px; }
+
+  #attemptInfo { text-align: center; font-size: 20px; color: #555; margin-bottom: 20px; }
+
+  .big-btn {
+    display: block;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto 20px auto;
+    padding: 26px 20px;
+    font-size: 26px;
+    font-weight: bold;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    color: white;
+    transition: transform 0.08s ease;
+  }
+  .big-btn:active { transform: scale(0.97); }
+  #recordBtn { background: #ea4335; }
+  #recordBtn.recording { background: #757575; }
+  #nextBtn { background: #1a73e8; }
+
+  #status { text-align: center; color: #d93025; font-size: 18px; min-height: 28px; margin-bottom: 10px; }
+
+  #resultBox {
+    display: none;
+    margin-top: 10px;
+    padding: 28px;
+    border-radius: 20px;
+    background: #e6f4ea;
+  }
+  #resultBox p { font-size: 22px; margin: 10px 0; color: #1a1a1a; }
+  #resultBox .main-score { font-size: 30px; font-weight: bold; color: #1a73e8; }
+
+  @media (max-width: 500px) {
+    h1 { font-size: 30px; }
+    #sentenceText { font-size: 26px; }
+    .big-btn { font-size: 22px; padding: 22px 16px; }
+  }
 </style>
 </head>
 <body>
-  <h2>영어 발음 연습</h2>
+<div class="screen">
+  <h1>영어 발음 연습</h1>
 
   <div id="loginBox">
-    <label>이름을 입력하세요</label>
-    <input type="text" id="studentName" placeholder="예: 신승환">
-    <label>레벨을 선택하세요</label>
-    <select id="levelSelect">
-      <option value="초급">초급</option>
-      <option value="중급">중급</option>
-      <option value="고급">고급</option>
-    </select>
-    <button id="startBtn" style="background:#1a73e8;color:white;">시작하기</button>
+    <div class="section-label">이름을 눌러주세요</div>
+    <div id="studentGrid" class="student-grid">
+      <div class="loading-text">학생 목록을 불러오는 중...</div>
+    </div>
   </div>
 
-  <div id="practiceBox" style="display:none;">
+  <div id="practiceBox">
+    <div class="top-bar">
+      <div class="who-am-i" id="whoAmI"></div>
+      <button class="switch-btn" id="switchBtn">다른 학생으로 전환</button>
+    </div>
+
     <div id="sentenceBox">
       <div id="sentenceText">문장을 불러오는 중...</div>
       <div id="translation"></div>
     </div>
 
     <div id="attemptInfo"></div>
-    <button id="recordBtn">🎤 녹음 시작</button>
-    <button id="nextBtn" style="display:none;">다음 문장</button>
+    <button id="recordBtn" class="big-btn">🎤 녹음 시작</button>
+    <button id="nextBtn" class="big-btn" style="display:none;">다음 문장 ➜</button>
     <div id="status"></div>
 
     <div id="resultBox">
-      <p>정확도: <span id="scoreAccuracy"></span>점</p>
+      <p>정확도: <span class="main-score" id="scoreAccuracy"></span>점</p>
       <p>유창성: <span id="scoreFluency"></span>점</p>
       <p>완성도: <span id="scoreCompleteness"></span>점</p>
-      <p>인식된 문장: <span id="recognizedText"></span></p>
+      <p style="color:#666; font-size:18px;">인식된 문장: <span id="recognizedText"></span></p>
     </div>
   </div>
+</div>
 
-  <script>
-    // ⚠️ 아래 URL을 본인의 Apps Script 웹앱 배포 URL로 바꿔주세요.
-    // 배포 방법: Apps Script 편집기 → 배포 → 새 배포 → 웹 앱 → URL 복사
-    var API_URL = "https://script.google.com/macros/s/AKfycbyg8z9HTCRa-pfzI1e8ea8wXpJqKZxtZzqxntwM9Ef2JvFaeZUf14ZuAJiQ1rUNgXEC4w/exec";
+<script>
+  // ⚠️ 아래 URL을 본인의 Apps Script 웹앱 배포 URL로 바꿔주세요.
+  var API_URL = "https://script.google.com/macros/s/AKfycbyg8z9HTCRa-pfzI1e8ea8wXpJqKZxtZzqxntwM9Ef2JvFaeZUf14ZuAJiQ1rUNgXEC4w/exec";
 
-    var studentName = "";
-    var level = "";
-    var currentSentence = null;
-    var attemptNumber = 0;
-    var maxAttempts = 3;
+  var studentName = "";
+  var level = "";
+  var currentSentence = null;
+  var attemptNumber = 0;
+  var maxAttempts = 3;
 
-    var mediaRecorder = null;
-    var recordedChunks = [];
-    var isRecording = false;
+  var mediaRecorder = null;
+  var recordedChunks = [];
+  var isRecording = false;
 
-    /**
-     * Apps Script API 서버(doPost)를 호출하는 공통 함수.
-     * text/plain 컨텐츠 타입을 사용해 브라우저의 CORS 사전요청(preflight)을 피합니다.
-     */
-    function callApi(action, payload) {
-      var body = Object.assign({ action: action }, payload || {});
-      return fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(body)
-      })
-        .then(function (res) { return res.json(); })
-        .then(function (json) {
-          if (!json.success) {
-            throw new Error(json.error || "알 수 없는 서버 오류");
-          }
-          return json.data;
-        });
-    }
-
-    document.getElementById("startBtn").onclick = function () {
-      studentName = document.getElementById("studentName").value.trim();
-      level = document.getElementById("levelSelect").value;
-      if (!studentName) {
-        alert("이름을 입력해주세요.");
-        return;
-      }
-      document.getElementById("loginBox").style.display = "none";
-      document.getElementById("practiceBox").style.display = "block";
-
-      callApi("getMaxAttempts").then(function (value) {
-        maxAttempts = value;
-        loadNewSentence();
+  function callApi(action, payload) {
+    var body = Object.assign({ action: action }, payload || {});
+    return fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(body)
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (json) {
+        if (!json.success) throw new Error(json.error || "알 수 없는 서버 오류");
+        return json.data;
       });
-    };
+  }
 
-    function loadNewSentence() {
-      attemptNumber = 0;
-      document.getElementById("resultBox").style.display = "none";
-      document.getElementById("nextBtn").style.display = "none";
-      document.getElementById("status").textContent = "";
-      document.getElementById("sentenceText").textContent = "문장을 불러오는 중...";
+  // ---------- 로그인 화면: 학생 목록 불러와서 터치 카드로 표시 ----------
+  function loadStudentGrid() {
+    callApi("getStudentList")
+      .then(function (students) {
+        var grid = document.getElementById("studentGrid");
+        grid.innerHTML = "";
 
-      callApi("getRandomSentence", { level: level })
-        .then(function (sentence) {
-          if (!sentence) {
-            document.getElementById("sentenceText").textContent =
-              "해당 레벨의 문장이 없습니다. 문장DB를 확인해주세요.";
-            return;
-          }
-          currentSentence = sentence;
-          document.getElementById("sentenceText").textContent = sentence.text;
-          document.getElementById("translation").textContent = sentence.translation || "";
-          updateAttemptInfo();
-        })
-        .catch(function (err) {
-          document.getElementById("status").textContent = "오류: " + err.message;
-        });
-    }
-
-    function updateAttemptInfo() {
-      document.getElementById("attemptInfo").textContent =
-        "시도 " + attemptNumber + " / " + maxAttempts;
-    }
-
-    document.getElementById("recordBtn").onclick = function () {
-      if (!isRecording) {
-        startRecording();
-      } else {
-        stopRecording();
-      }
-    };
-
-    document.getElementById("nextBtn").onclick = function () {
-      loadNewSentence();
-    };
-
-    function startRecording() {
-      if (attemptNumber >= maxAttempts) {
-        document.getElementById("status").textContent =
-          "이 문장에 대한 시도 횟수를 모두 사용했습니다. 다음 문장으로 넘어가세요.";
-        return;
-      }
-
-      navigator.mediaDevices
-        .getUserMedia({ audio: true })
-        .then(function (stream) {
-          recordedChunks = [];
-          mediaRecorder = new MediaRecorder(stream);
-
-          mediaRecorder.ondataavailable = function (e) {
-            if (e.data.size > 0) recordedChunks.push(e.data);
-          };
-
-          mediaRecorder.onstop = function () {
-            stream.getTracks().forEach(function (track) { track.stop(); });
-            var blob = new Blob(recordedChunks, { type: "audio/webm" });
-            processAudio(blob);
-          };
-
-          mediaRecorder.start();
-          isRecording = true;
-          document.getElementById("recordBtn").textContent = "⏹ 녹음 종료";
-          document.getElementById("recordBtn").classList.add("recording");
-          document.getElementById("status").textContent = "녹음 중입니다...";
-        })
-        .catch(function (err) {
-          document.getElementById("status").textContent =
-            "마이크 접근 실패: " + err.message;
-        });
-    }
-
-    function stopRecording() {
-      mediaRecorder.stop();
-      isRecording = false;
-      document.getElementById("recordBtn").textContent = "🎤 녹음 시작";
-      document.getElementById("recordBtn").classList.remove("recording");
-      document.getElementById("status").textContent = "채점 중입니다...";
-    }
-
-    /**
-     * 녹음된 webm 오디오를 Azure가 요구하는
-     * WAV(16kHz, 16bit, mono) 형식으로 변환한 뒤 서버로 전송합니다.
-     */
-    function processAudio(blob) {
-      var reader = new FileReader();
-      reader.onload = function () {
-        var arrayBuffer = reader.result;
-        var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-        audioCtx.decodeAudioData(
-          arrayBuffer,
-          function (audioBuffer) {
-            resampleTo16k(audioBuffer, function (resampledBuffer) {
-              var wavBlob = encodeWav(resampledBuffer);
-              var wavReader = new FileReader();
-              wavReader.onload = function () {
-                var base64Audio = wavReader.result.split(",")[1];
-                sendToServer(base64Audio);
-              };
-              wavReader.readAsDataURL(wavBlob);
-            });
-          },
-          function (err) {
-            document.getElementById("status").textContent =
-              "오디오 디코딩 실패: " + err;
-          }
-        );
-      };
-      reader.readAsArrayBuffer(blob);
-    }
-
-    function resampleTo16k(audioBuffer, callback) {
-      var targetRate = 16000;
-      var offlineCtx = new OfflineAudioContext(
-        1,
-        Math.ceil(audioBuffer.duration * targetRate),
-        targetRate
-      );
-      var source = offlineCtx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(offlineCtx.destination);
-      source.start(0);
-      offlineCtx.startRendering().then(function (renderedBuffer) {
-        callback(renderedBuffer);
-      });
-    }
-
-    function encodeWav(audioBuffer) {
-      var samples = audioBuffer.getChannelData(0);
-      var buffer = new ArrayBuffer(44 + samples.length * 2);
-      var view = new DataView(buffer);
-
-      function writeString(offset, str) {
-        for (var i = 0; i < str.length; i++) {
-          view.setUint8(offset + i, str.charCodeAt(i));
+        if (!students || students.length === 0) {
+          grid.innerHTML = '<div class="loading-text">학생목록 시트에 등록된 학생이 없습니다.</div>';
+          return;
         }
-      }
 
-      writeString(0, "RIFF");
-      view.setUint32(4, 36 + samples.length * 2, true);
-      writeString(8, "WAVE");
-      writeString(12, "fmt ");
-      view.setUint32(16, 16, true);
-      view.setUint16(20, 1, true); // PCM
-      view.setUint16(22, 1, true); // mono
-      view.setUint32(24, 16000, true); // sample rate
-      view.setUint32(28, 16000 * 2, true); // byte rate
-      view.setUint16(32, 2, true); // block align
-      view.setUint16(34, 16, true); // bits per sample
-      writeString(36, "data");
-      view.setUint32(40, samples.length * 2, true);
-
-      var offset = 44;
-      for (var i = 0; i < samples.length; i++, offset += 2) {
-        var s = Math.max(-1, Math.min(1, samples[i]));
-        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
-      }
-
-      return new Blob([view], { type: "audio/wav" });
-    }
-
-    function sendToServer(base64Audio) {
-      attemptNumber++;
-      updateAttemptInfo();
-
-      callApi("submitRecording", {
-        studentName: studentName,
-        sentenceId: currentSentence.id,
-        referenceText: currentSentence.text,
-        attemptNumber: attemptNumber,
-        audioBase64: base64Audio
-      })
-        .then(function (result) {
-          document.getElementById("status").textContent = "";
-          document.getElementById("resultBox").style.display = "block";
-          document.getElementById("scoreAccuracy").textContent = Math.round(result.accuracyScore);
-          document.getElementById("scoreFluency").textContent = Math.round(result.fluencyScore);
-          document.getElementById("scoreCompleteness").textContent = Math.round(result.completenessScore);
-          document.getElementById("recognizedText").textContent = result.recognizedText;
-
-          if (attemptNumber >= maxAttempts) {
-            callApi("finalizeBestScore", {
-              studentName: studentName,
-              sentenceId: currentSentence.id
-            });
-            document.getElementById("nextBtn").style.display = "inline-block";
-          }
-        })
-        .catch(function (err) {
-          document.getElementById("status").textContent = "채점 오류: " + err.message;
+        students.forEach(function (student) {
+          var card = document.createElement("div");
+          card.className = "student-card";
+          card.innerHTML =
+            '<div class="avatar">' + student.name.charAt(0) + '</div>' +
+            '<div class="student-name">' + student.name + '</div>' +
+            '<div class="student-level">' + student.level + '</div>';
+          card.onclick = function () {
+            studentName = student.name;
+            level = student.level;
+            enterPractice();
+          };
+          grid.appendChild(card);
         });
+      })
+      .catch(function (err) {
+        document.getElementById("studentGrid").innerHTML =
+          '<div class="loading-text">불러오기 실패: ' + err.message + '</div>';
+      });
+  }
+
+  function enterPractice() {
+    document.getElementById("loginBox").style.display = "none";
+    document.getElementById("practiceBox").style.display = "block";
+    document.getElementById("whoAmI").textContent = studentName + " (" + level + ")";
+
+    callApi("getMaxAttempts").then(function (value) {
+      maxAttempts = value;
+      loadNewSentence();
+    });
+  }
+
+  document.getElementById("switchBtn").onclick = function () {
+    document.getElementById("practiceBox").style.display = "none";
+    document.getElementById("loginBox").style.display = "block";
+    loadStudentGrid();
+  };
+
+  function loadNewSentence() {
+    attemptNumber = 0;
+    document.getElementById("resultBox").style.display = "none";
+    document.getElementById("nextBtn").style.display = "none";
+    document.getElementById("status").textContent = "";
+    document.getElementById("sentenceText").textContent = "문장을 불러오는 중...";
+
+    callApi("getRandomSentence", { level: level })
+      .then(function (sentence) {
+        if (!sentence) {
+          document.getElementById("sentenceText").textContent =
+            "해당 레벨의 문장이 없습니다. 문장DB를 확인해주세요.";
+          return;
+        }
+        currentSentence = sentence;
+        document.getElementById("sentenceText").textContent = sentence.text;
+        document.getElementById("translation").textContent = sentence.translation || "";
+        updateAttemptInfo();
+      })
+      .catch(function (err) {
+        document.getElementById("status").textContent = "오류: " + err.message;
+      });
+  }
+
+  function updateAttemptInfo() {
+    document.getElementById("attemptInfo").textContent =
+      "시도 " + attemptNumber + " / " + maxAttempts;
+  }
+
+  document.getElementById("recordBtn").onclick = function () {
+    if (!isRecording) startRecording(); else stopRecording();
+  };
+  document.getElementById("nextBtn").onclick = function () { loadNewSentence(); };
+
+  function startRecording() {
+    if (attemptNumber >= maxAttempts) {
+      document.getElementById("status").textContent =
+        "이 문장에 대한 시도 횟수를 모두 사용했습니다. 다음 문장으로 넘어가세요.";
+      return;
     }
-  </script>
+
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(function (stream) {
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = function (e) {
+          if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+        mediaRecorder.onstop = function () {
+          stream.getTracks().forEach(function (track) { track.stop(); });
+          var blob = new Blob(recordedChunks, { type: "audio/webm" });
+          processAudio(blob);
+        };
+        mediaRecorder.start();
+        isRecording = true;
+        var btn = document.getElementById("recordBtn");
+        btn.textContent = "⏹ 녹음 종료";
+        btn.classList.add("recording");
+        document.getElementById("status").textContent = "녹음 중입니다...";
+      })
+      .catch(function (err) {
+        document.getElementById("status").textContent = "마이크 접근 실패: " + err.message;
+      });
+  }
+
+  function stopRecording() {
+    mediaRecorder.stop();
+    isRecording = false;
+    var btn = document.getElementById("recordBtn");
+    btn.textContent = "🎤 녹음 시작";
+    btn.classList.remove("recording");
+    document.getElementById("status").textContent = "채점 중입니다...";
+  }
+
+  function processAudio(blob) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var arrayBuffer = reader.result;
+      var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      audioCtx.decodeAudioData(
+        arrayBuffer,
+        function (audioBuffer) {
+          resampleTo16k(audioBuffer, function (resampledBuffer) {
+            var wavBlob = encodeWav(resampledBuffer);
+            var wavReader = new FileReader();
+            wavReader.onload = function () {
+              var base64Audio = wavReader.result.split(",")[1];
+              sendToServer(base64Audio);
+            };
+            wavReader.readAsDataURL(wavBlob);
+          });
+        },
+        function (err) {
+          document.getElementById("status").textContent = "오디오 디코딩 실패: " + err;
+        }
+      );
+    };
+    reader.readAsArrayBuffer(blob);
+  }
+
+  function resampleTo16k(audioBuffer, callback) {
+    var targetRate = 16000;
+    var offlineCtx = new OfflineAudioContext(1, Math.ceil(audioBuffer.duration * targetRate), targetRate);
+    var source = offlineCtx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(offlineCtx.destination);
+    source.start(0);
+    offlineCtx.startRendering().then(function (renderedBuffer) { callback(renderedBuffer); });
+  }
+
+  function encodeWav(audioBuffer) {
+    var samples = audioBuffer.getChannelData(0);
+    var buffer = new ArrayBuffer(44 + samples.length * 2);
+    var view = new DataView(buffer);
+    function writeString(offset, str) {
+      for (var i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    }
+    writeString(0, "RIFF");
+    view.setUint32(4, 36 + samples.length * 2, true);
+    writeString(8, "WAVE");
+    writeString(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, 16000, true);
+    view.setUint32(28, 16000 * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, "data");
+    view.setUint32(40, samples.length * 2, true);
+    var offset = 44;
+    for (var i = 0; i < samples.length; i++, offset += 2) {
+      var s = Math.max(-1, Math.min(1, samples[i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    }
+    return new Blob([view], { type: "audio/wav" });
+  }
+
+  function sendToServer(base64Audio) {
+    attemptNumber++;
+    updateAttemptInfo();
+
+    callApi("submitRecording", {
+      studentName: studentName,
+      sentenceId: currentSentence.id,
+      referenceText: currentSentence.text,
+      attemptNumber: attemptNumber,
+      audioBase64: base64Audio
+    })
+      .then(function (result) {
+        document.getElementById("status").textContent = "";
+        document.getElementById("resultBox").style.display = "block";
+        document.getElementById("scoreAccuracy").textContent = Math.round(result.accuracyScore);
+        document.getElementById("scoreFluency").textContent = Math.round(result.fluencyScore);
+        document.getElementById("scoreCompleteness").textContent = Math.round(result.completenessScore);
+        document.getElementById("recognizedText").textContent = result.recognizedText;
+
+        if (attemptNumber >= maxAttempts) {
+          callApi("finalizeBestScore", { studentName: studentName, sentenceId: currentSentence.id });
+          document.getElementById("nextBtn").style.display = "block";
+        }
+      })
+      .catch(function (err) {
+        document.getElementById("status").textContent = "채점 오류: " + err.message;
+      });
+  }
+
+  // 초기 진입: 학생 선택 화면 표시
+  loadStudentGrid();
+</script>
 </body>
 </html>

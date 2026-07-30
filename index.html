@@ -256,6 +256,9 @@
       maxAttempts = results[0];
       totalSentences = results[1];
       loadNewSentence();
+    }).catch(function (err) {
+      document.getElementById("sentenceText").textContent =
+        "초기화 오류: " + err.message;
     });
   }
 
@@ -276,6 +279,7 @@
     attemptNumber = 0;
     document.getElementById("resultBox").style.display = "none";
     document.getElementById("nextBtn").style.display = "none";
+    document.getElementById("recordBtn").style.display = "block";
     document.getElementById("status").textContent = "";
     document.getElementById("sentenceText").textContent = "문장을 불러오는 중...";
     document.getElementById("sessionProgress").textContent =
@@ -445,6 +449,7 @@
 
         if (attemptNumber >= maxAttempts) {
           callApi("finalizeBestScore", { studentName: studentName, sentenceId: currentSentence.id });
+          document.getElementById("recordBtn").style.display = "none";
           document.getElementById("nextBtn").style.display = "block";
         }
       })

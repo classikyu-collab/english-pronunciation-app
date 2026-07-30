@@ -280,6 +280,7 @@
     document.getElementById("resultBox").style.display = "none";
     document.getElementById("nextBtn").style.display = "none";
     document.getElementById("recordBtn").style.display = "block";
+    document.getElementById("recordBtn").textContent = "🎤 녹음 시작";
     document.getElementById("status").textContent = "";
     document.getElementById("sentenceText").textContent = "문장을 불러오는 중...";
     document.getElementById("sessionProgress").textContent =
@@ -322,7 +323,12 @@
   document.getElementById("recordBtn").onclick = function () {
     if (!isRecording) startRecording(); else stopRecording();
   };
-  document.getElementById("nextBtn").onclick = function () { loadNewSentence(); };
+  document.getElementById("nextBtn").onclick = function () {
+    if (currentSentence) {
+      callApi("finalizeBestScore", { studentName: studentName, sentenceId: currentSentence.id });
+    }
+    loadNewSentence();
+  };
 
   function startRecording() {
     if (attemptNumber >= maxAttempts) {
@@ -447,10 +453,13 @@
         document.getElementById("scoreCompleteness").textContent = Math.round(result.completenessScore);
         document.getElementById("recognizedText").textContent = result.recognizedText;
 
+        // 매 시도 후 "다음 문장"은 항상 선택 가능
+        document.getElementById("nextBtn").style.display = "block";
+
         if (attemptNumber >= maxAttempts) {
-          callApi("finalizeBestScore", { studentName: studentName, sentenceId: currentSentence.id });
           document.getElementById("recordBtn").style.display = "none";
-          document.getElementById("nextBtn").style.display = "block";
+        } else {
+          document.getElementById("recordBtn").textContent = "🎤 다시 도전";
         }
       })
       .catch(function (err) {

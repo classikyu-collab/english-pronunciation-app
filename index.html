@@ -84,39 +84,78 @@
     background: white;
     border-radius: 20px;
     padding: 48px 24px;
-    margin: 20px 0 32px 0;
+    margin: 20px 0 24px 0;
     text-align: center;
     box-shadow: 0 2px 12px rgba(0,0,0,0.06);
   }
   #sentenceText { font-size: 34px; color: #1a1a1a; line-height: 1.4; }
   #translation { color: #888; font-size: 18px; margin-top: 14px; }
 
-  #attemptInfo { text-align: center; font-size: 20px; color: #555; margin-bottom: 20px; }
+  #attemptInfo { text-align: center; font-size: 20px; color: #555; margin-bottom: 6px; }
+  #attemptHistory { text-align: center; font-size: 15px; color: #999; margin-bottom: 20px; letter-spacing: 0.3px; }
 
+  /* ---------- 상태 배너 (녹음중/채점중/오류) ---------- */
+  .status-banner {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 20px;
+    font-weight: bold;
+    color: #1a73e8;
+    background: #eaf2fe;
+    border-radius: 16px;
+    padding: 14px 20px;
+    margin-bottom: 20px;
+  }
+  .status-banner.show { display: flex; }
+  .status-banner.error { color: #d93025; background: #fdeceb; }
+  .spinner {
+    width: 22px; height: 22px;
+    border: 3px solid #cfe0fb;
+    border-top-color: #1a73e8;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+  .status-banner.error .spinner { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- 버튼 ---------- */
+  .button-row {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+  @media (min-width: 560px) {
+    .button-row.two { flex-direction: row; max-width: 620px; }
+  }
   .big-btn {
+    flex: 1;
     display: block;
     width: 100%;
-    max-width: 420px;
-    margin: 0 auto 20px auto;
-    padding: 26px 20px;
-    font-size: 26px;
+    padding: 24px 20px;
+    font-size: 24px;
     font-weight: bold;
-    border: none;
     border-radius: 20px;
     cursor: pointer;
-    color: white;
-    transition: transform 0.08s ease;
+    transition: transform 0.08s ease, opacity 0.15s ease;
+    border: 3px solid transparent;
   }
   .big-btn:active { transform: scale(0.97); }
-  #recordBtn { background: #ea4335; }
-  #recordBtn.recording { background: #757575; }
-  #nextBtn { background: #1a73e8; }
+  .big-btn:focus { outline: none; }
+  .big-btn:focus-visible { outline: 3px solid #90c2ff; outline-offset: 2px; }
+  .big-btn:disabled { opacity: 0.4; pointer-events: none; }
 
-  #status { text-align: center; color: #d93025; font-size: 18px; min-height: 28px; margin-bottom: 10px; }
+  .btn-primary { background: #ea4335; color: white; }
+  .btn-primary.recording { background: #757575; }
+  .btn-outline { background: white; color: #1a73e8; border-color: #1a73e8; }
 
   #resultBox {
     display: none;
-    margin-top: 10px;
+    margin-top: 24px;
     padding: 28px;
     border-radius: 20px;
     background: #e6f4ea;
@@ -127,7 +166,7 @@
   @media (max-width: 500px) {
     h1 { font-size: 30px; }
     #sentenceText { font-size: 26px; }
-    .big-btn { font-size: 22px; padding: 22px 16px; }
+    .big-btn { font-size: 20px; padding: 20px 16px; }
   }
 </style>
 </head>
@@ -156,9 +195,17 @@
     </div>
 
     <div id="attemptInfo"></div>
-    <button id="recordBtn" class="big-btn">🎤 녹음 시작</button>
-    <button id="nextBtn" class="big-btn" style="display:none;">다음 문장 ➜</button>
-    <div id="status"></div>
+    <div id="attemptHistory"></div>
+
+    <div id="statusBanner" class="status-banner">
+      <div class="spinner"></div>
+      <span id="statusText"></span>
+    </div>
+
+    <div class="button-row" id="buttonRow">
+      <button id="recordBtn" class="big-btn btn-primary">🎤 녹음 시작</button>
+      <button id="nextBtn" class="big-btn btn-outline" style="display:none;">다음 문장 ➜</button>
+    </div>
 
     <div id="resultBox">
       <p>정확도: <span class="main-score" id="scoreAccuracy"></span>점</p>
@@ -172,7 +219,7 @@
     <div style="font-size:60px; margin-bottom:20px;">🎉</div>
     <div style="font-size:28px; font-weight:bold; color:#1a73e8; margin-bottom:12px;">오늘 연습을 모두 마쳤어요!</div>
     <div style="font-size:18px; color:#666; margin-bottom:32px;">수고했어요. 다음에 또 만나요.</div>
-    <button class="big-btn" id="restartBtn" style="background:#1a73e8; max-width:300px;">처음으로</button>
+    <button class="big-btn btn-primary" id="restartBtn" style="max-width:300px; margin:0 auto; display:block;">처음으로</button>
   </div>
 </div>
 
@@ -188,6 +235,7 @@
   var sentenceIndex = 0;
   var totalSentences = 5;
   var usedSentenceIds = [];
+  var attemptScores = []; // 이번 문장에서 시도별 정확도(보정) 기록
 
   var mediaRecorder = null;
   var recordedChunks = [];
@@ -205,6 +253,25 @@
         if (!json.success) throw new Error(json.error || "알 수 없는 서버 오류");
         return json.data;
       });
+  }
+
+  // ---------- 상태 배너 헬퍼 ----------
+  function showStatus(text, isError) {
+    var banner = document.getElementById("statusBanner");
+    banner.classList.toggle("error", !!isError);
+    banner.classList.add("show");
+    document.getElementById("statusText").textContent = text;
+  }
+  function hideStatus() {
+    document.getElementById("statusBanner").classList.remove("show");
+  }
+  function setButtonsDisabled(disabled) {
+    document.getElementById("recordBtn").disabled = disabled;
+    document.getElementById("nextBtn").disabled = disabled;
+  }
+  function updateButtonRowLayout() {
+    var nextVisible = document.getElementById("nextBtn").style.display !== "none";
+    document.getElementById("buttonRow").classList.toggle("two", nextVisible);
   }
 
   // ---------- 로그인 화면: 학생 목록 불러와서 터치 카드로 표시 ----------
@@ -257,8 +324,7 @@
       totalSentences = results[1];
       loadNewSentence();
     }).catch(function (err) {
-      document.getElementById("sentenceText").textContent =
-        "초기화 오류: " + err.message;
+      document.getElementById("sentenceText").textContent = "초기화 오류: " + err.message;
     });
   }
 
@@ -277,14 +343,19 @@
     }
 
     attemptNumber = 0;
+    attemptScores = [];
+    hideStatus();
     document.getElementById("resultBox").style.display = "none";
     document.getElementById("nextBtn").style.display = "none";
     document.getElementById("recordBtn").style.display = "block";
     document.getElementById("recordBtn").textContent = "🎤 녹음 시작";
-    document.getElementById("status").textContent = "";
+    document.getElementById("recordBtn").classList.remove("recording");
+    setButtonsDisabled(false);
+    updateButtonRowLayout();
     document.getElementById("sentenceText").textContent = "문장을 불러오는 중...";
     document.getElementById("sessionProgress").textContent =
       "문장 " + sentenceIndex + " / " + totalSentences;
+    renderAttemptHistory();
 
     callApi("getRandomSentence", { level: level, excludeIds: usedSentenceIds })
       .then(function (sentence) {
@@ -300,8 +371,22 @@
         updateAttemptInfo();
       })
       .catch(function (err) {
-        document.getElementById("status").textContent = "오류: " + err.message;
+        showStatus("오류: " + err.message, true);
       });
+  }
+
+  function updateAttemptInfo() {
+    document.getElementById("attemptInfo").textContent =
+      "시도 " + attemptNumber + " / " + maxAttempts;
+  }
+
+  function renderAttemptHistory() {
+    var parts = [];
+    for (var i = 0; i < maxAttempts; i++) {
+      var label = (i + 1) + "차: " + (attemptScores[i] != null ? Math.round(attemptScores[i]) : "-");
+      parts.push(label);
+    }
+    document.getElementById("attemptHistory").textContent = parts.join(" · ");
   }
 
   function showCompleteScreen() {
@@ -315,14 +400,10 @@
     loadStudentGrid();
   };
 
-  function updateAttemptInfo() {
-    document.getElementById("attemptInfo").textContent =
-      "시도 " + attemptNumber + " / " + maxAttempts;
-  }
-
   document.getElementById("recordBtn").onclick = function () {
     if (!isRecording) startRecording(); else stopRecording();
   };
+
   document.getElementById("nextBtn").onclick = function () {
     if (currentSentence) {
       callApi("finalizeBestScore", { studentName: studentName, sentenceId: currentSentence.id });
@@ -331,11 +412,11 @@
   };
 
   function startRecording() {
-    if (attemptNumber >= maxAttempts) {
-      document.getElementById("status").textContent =
-        "이 문장에 대한 시도 횟수를 모두 사용했습니다. 다음 문장으로 넘어가세요.";
-      return;
-    }
+    if (attemptNumber >= maxAttempts) return; // 방어적 처리 (버튼이 이미 숨겨져 있어야 정상)
+
+    // 새 시도를 시작하므로 이전 결과는 즉시 숨기고, 다음 문장 버튼도 잠시 비활성화
+    document.getElementById("resultBox").style.display = "none";
+    document.getElementById("nextBtn").disabled = true;
 
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then(function (stream) {
@@ -354,10 +435,11 @@
         var btn = document.getElementById("recordBtn");
         btn.textContent = "⏹ 녹음 종료";
         btn.classList.add("recording");
-        document.getElementById("status").textContent = "녹음 중입니다...";
+        showStatus("녹음 중입니다...", false);
       })
       .catch(function (err) {
-        document.getElementById("status").textContent = "마이크 접근 실패: " + err.message;
+        showStatus("마이크 접근 실패: " + err.message, true);
+        document.getElementById("nextBtn").disabled = false;
       });
   }
 
@@ -367,7 +449,8 @@
     var btn = document.getElementById("recordBtn");
     btn.textContent = "🎤 녹음 시작";
     btn.classList.remove("recording");
-    document.getElementById("status").textContent = "채점 중입니다...";
+    btn.disabled = true; // 채점 끝날 때까지 재클릭 방지
+    showStatus("채점 중입니다...", false);
   }
 
   function processAudio(blob) {
@@ -389,7 +472,9 @@
           });
         },
         function (err) {
-          document.getElementById("status").textContent = "오디오 디코딩 실패: " + err;
+          showStatus("오디오 디코딩 실패: " + err, true);
+          document.getElementById("recordBtn").disabled = false;
+          document.getElementById("nextBtn").disabled = false;
         }
       );
     };
@@ -446,24 +531,32 @@
       audioBase64: base64Audio
     })
       .then(function (result) {
-        document.getElementById("status").textContent = "";
+        hideStatus();
         document.getElementById("resultBox").style.display = "block";
         document.getElementById("scoreAccuracy").textContent = Math.round(result.accuracyScore);
         document.getElementById("scoreFluency").textContent = Math.round(result.fluencyScore);
         document.getElementById("scoreCompleteness").textContent = Math.round(result.completenessScore);
         document.getElementById("recognizedText").textContent = result.recognizedText;
 
+        attemptScores[attemptNumber - 1] = result.accuracyScore;
+        renderAttemptHistory();
+
         // 매 시도 후 "다음 문장"은 항상 선택 가능
         document.getElementById("nextBtn").style.display = "block";
+        document.getElementById("nextBtn").disabled = false;
+        updateButtonRowLayout();
 
         if (attemptNumber >= maxAttempts) {
           document.getElementById("recordBtn").style.display = "none";
         } else {
+          document.getElementById("recordBtn").disabled = false;
           document.getElementById("recordBtn").textContent = "🎤 다시 도전";
         }
       })
       .catch(function (err) {
-        document.getElementById("status").textContent = "채점 오류: " + err.message;
+        showStatus("채점 오류: " + err.message, true);
+        document.getElementById("recordBtn").disabled = false;
+        document.getElementById("nextBtn").disabled = false;
       });
   }
 
